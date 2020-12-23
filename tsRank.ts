@@ -79,8 +79,9 @@ function metricLogMsg({
   check,
 }: Metric) {
   const relPath = relative(cwd, path)
+  const dur = check!.dur / 1000 // Get ms
 
-  return `${check!.dur.toFixed(0).padStart(durChars)} ms < ${symbolName
+  return `${dur.toFixed(0).padStart(durChars)} ms < ${symbolName
     .slice(0, typeChars)
     .padEnd(typeChars)} > ${relPath}:${start.line}:${start.character}`
 }

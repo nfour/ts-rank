@@ -54,7 +54,8 @@ function logMetricGroup(metrics) {
 }
 function metricLogMsg({ symbol: { firstDeclaration: { end, path, start }, symbolName, }, check, }) {
     const relPath = path_1.relative(cwd, path);
-    return `${check.dur.toFixed(0).padStart(durChars)} ms < ${symbolName
+    const dur = check.dur / 1000; // Get ms
+    return `${dur.toFixed(0).padStart(durChars)} ms < ${symbolName
         .slice(0, typeChars)
         .padEnd(typeChars)} > ${relPath}:${start.line}:${start.character}`;
 }

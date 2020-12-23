@@ -4,7 +4,7 @@
   "main": "./x/tsRank.js",
   "bin": "./x/tsRank.js",
   "scripts": {
-    "trace": "tsc --generateTrace .tsTrace && yarn readTrace",
+    "trace": "tsc --noEmit --generateTrace .tsTrace && yarn readTrace",
     "readTrace": "node .",
     "build": "tsc"
   },

@@ -4,10 +4,11 @@ A quick n simple CLI to rank output from TypeScript@4.1's `compilerOptions.gener
 
 So you can discover where slow types are hiding.
 
-Will output a set of ranked lists, for metrics:
-- [x] `StructuredTypeCheck`
+Will output a set of ranked metrics:
+- [x] `StructuredTypeCheck` for source files
+- [x] `StructuredTypeCheck` for node_modules
 
-Intend to support type alises & other metrics, though for now `StructuredTypeCheck` seems to be the most relevant.
+Intend to support type alises & other checks, though for now `StructuredTypeCheck` is useful.
 
 + [Run ts-rank](#run-ts-rank)
 + [Example package.json scripts](#example-packagejson-scripts)
@@ -34,23 +35,33 @@ Ranking output from 'tsconfig.compilerOptions.generateTrace'
     cwd: '~/ts-rank'
   }
   
-  :: Reading files: 147.192ms
-  :: 72627 traces, 30455 types
+  :: Reading files: 161.380ms
+  :: 72435 traces, 30457 types
   
   'StructuredTypeCheck' source:
-    1.      400 ms < __object                       > tsRank.ts:14:12
-    2.      328 ms < __object                       > tsRank.ts:14:12
-    3.      150 ms < __function                     > tsRank.ts:120:36
-    4.      139 ms < __function                     > tsRank.ts:140:64
-    5.       80 ms < __function                     > tsRank.ts:140:30
+     1.        0 ms < __object                       > tsRank.ts:16:12
+     2.        0 ms < __function                     > tsRank.ts:143:64
+     3.        0 ms < __function                     > tsRank.ts:123:36
+     4.        0 ms < __object                       > tsRank.ts:16:12
+     5.        0 ms < __function                     > tsRank.ts:136:10
+     6.        0 ms < __function                     > tsRank.ts:143:30
+     7.        0 ms < __object                       > tsRank.ts:115:34
+     8.        0 ms < Symbol                         > tsRank.ts:209:4
+     9.        0 ms < __function                     > tsRank.ts:100:30
+    10.        0 ms < __function                     > tsRank.ts:92:78
     
   
   'StructuredTypeCheck' node_modules:
-    1.    76755 ms < ObjectChain                    > node_modules/@types/lodash/common/common.d.ts:205:6
-    2.    76054 ms < entries                        > node_modules/@types/lodash/common/object.d.ts:599:31
-    3.    75585 ms < CollectionChain                > node_modules/@types/lodash/common/common.d.ts:181:6
-    4.    75234 ms < CollectionChain                > node_modules/@types/lodash/common/common.d.ts:181:6
-    5.    74964 ms < pop                            > node_modules/@types/lodash/common/common.d.ts:182:35
+     1.       84 ms < ObjectChain                    > node_modules/@types/lodash/common/common.d.ts:205:6
+     2.       83 ms < entries                        > node_modules/@types/lodash/common/object.d.ts:599:31
+     3.       83 ms < CollectionChain                > node_modules/@types/lodash/common/common.d.ts:181:6
+     4.       82 ms < CollectionChain                > node_modules/@types/lodash/common/common.d.ts:181:6
+     5.       82 ms < pop                            > node_modules/@types/lodash/common/common.d.ts:182:35
+     6.       82 ms < ExpChain                       > node_modules/@types/lodash/common/common.d.ts:15:22
+     7.       70 ms < FunctionChain                  > node_modules/@types/lodash/common/common.d.ts:199:6
+     8.       59 ms < FunctionChain                  > node_modules/@types/lodash/common/common.d.ts:199:6
+     9.       26 ms < Http2SecureServer              > node_modules/@types/node/http2.d.ts:513:6
+    10.       17 ms < ClientHttp2Stream              > node_modules/@types/node/http2.d.ts:181:6
     
   :: T: 196.840ms
 
