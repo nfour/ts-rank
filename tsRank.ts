@@ -120,10 +120,7 @@ function mapStructuredTypes({ trace, types }: TraceAndTypes) {
     }
   }
 
-  return structuredTypeMetrics.map((item) => ({
-    ...item,
-    isNodeModule: item.symbol.firstDeclaration.path.includes('/node_modules'),
-  }))
+  return structuredTypeMetrics
 }
 
 function FilterByGlob(glob: string) {
