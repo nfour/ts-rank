@@ -10,9 +10,9 @@ Will output a set of ranked lists, for metrics:
 Intend to support type alises & other metrics, though for now `StructuredTypeCheck` seems to be the most relevant.
 
 + [Run ts-rank](#run-ts-rank)
-+ [Configure tsconfig.json](#configure-tsconfigjson)
-+ [Configure fork-ts-checker-webpack-plugin](#configure-fork-ts-checker-webpack-plugin)
 + [Example package.json scripts](#example-packagejson-scripts)
++ [Configure through tsconfig.json](#configure-through-tsconfigjson)
++ [Configure through fork-ts-checker-webpack-plugin](#configure-through-fork-ts-checker-webpack-plugin)
 
 ## Run ts-rank
 
@@ -78,9 +78,18 @@ npx ts-rank --traceFile trace/trace.json --typesFile trace/types.json
 npx ts-rank --pattern "**/someFolder/**"  
 ```
 
+## Example package.json scripts
 
+```json
+{
+  "scripts": {
+    "trace": "tsc --noEmit --generateTrace .tsTrace && npx ts-rank",
+    "trace:full": "tsc --noEmit --incremental false --generateTrace .tsTrace && npx ts-rank",
+  }
+}
+```
 
-## Configure tsconfig.json
+## Configure through tsconfig.json
 
 ```json
 {
@@ -96,7 +105,7 @@ npx ts-rank --pattern "**/someFolder/**"
 
 Also works with `fork-ts-checker-webpack-plugin`. Try using the `configOverwites` option when configuring the webpack plugin.
 
-## Configure fork-ts-checker-webpack-plugin
+## Configure through fork-ts-checker-webpack-plugin
 
 ```ts
 const isTracingTs = true
@@ -118,14 +127,4 @@ new TsPlugin({
     },
   },
 }),
-```
-
-## Example package.json scripts
-
-```json
-{
-  "scripts": {
-    "trace": "tsc --generateTrace .tsTrace && npx ts-rank"
-  }
-}
 ```
