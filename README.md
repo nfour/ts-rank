@@ -16,14 +16,20 @@ Intend to support type alises & other metrics, though for now `StructuredTypeChe
 
 ## Run ts-rank
 
+```
+npx ts-rank
+```
+
+Outputs:
+
 ```bash
 ts-rank
 
 Ranking output from 'tsconfig.compilerOptions.generateTrace'
   {
     logCount: 5,
-    traceFile: '~/ts-rank/.tsTrace/trace.json',
-    typesFile: '~/ts-rank/.tsTrace/types.json',
+    traceFile: '~/.tsTrace/trace.json',
+    typesFile: '~/.tsTrace/types.json',
     pattern: '**/*',
     cwd: '~/ts-rank'
   }
