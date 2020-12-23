@@ -13,6 +13,10 @@
     "lodash": "^4.17.20",
     "yargs": "~16.2.0"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nfour/ts-rank"
+  },
   "devDependencies": {
     "@types/node": "~14.14.14",
     "@types/lodash": "^4.14.165",
