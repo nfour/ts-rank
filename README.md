@@ -95,7 +95,7 @@ npx ts-rank --pattern "**/someFolder/**"
 {
   "scripts": {
     "trace": "tsc --noEmit --generateTrace .tsTrace && npx ts-rank",
-    "trace:full": "tsc --noEmit --incremental false --generateTrace .tsTrace && npx ts-rank",
+    "trace:full": "tsc --noEmit --incremental false --tsBuildInfoFile null --generateTrace .tsTrace && npx ts-rank",
   }
 }
 ```
