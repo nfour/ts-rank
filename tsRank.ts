@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { readFile } from 'fs'
 import { orderBy } from 'lodash'
 import { relative, resolve } from 'path'
