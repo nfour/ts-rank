@@ -20,7 +20,7 @@ Intend to support type alises & other checks, though for now `StructuredTypeChec
 This 1-liner should work in most projects without any configuration:
 
 ```
-tsc --noEmit --generateTrace .tsTrace && npx ts-rank
+npm run tsc --noEmit --generateTrace .tsTrace && npx ts-rank
 ```
 
 Outputs:
