@@ -17,8 +17,10 @@ Intend to support type alises & other checks, though for now `StructuredTypeChec
 
 ## Run ts-rank
 
+This 1-liner should work in most projects without any configuration:
+
 ```
-npx ts-rank
+tsc --noEmit --generateTrace .tsTrace && npx ts-rank
 ```
 
 Outputs:
