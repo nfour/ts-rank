@@ -23,8 +23,7 @@ let { FILE_LIMIT, FILE_TYPE_LIMIT, TRACE_FILE, TYPES_FILE, PATTERN = '**/*' } = 
 TRACE_FILE = resolve(cwd, TRACE_FILE)
 TYPES_FILE = resolve(cwd, TYPES_FILE)
 
-const FILE_LIMIT_CHARS = FILE_LIMIT.toString().length
-const FILE_TYPE_LIMIT_CHARS = FILE_TYPE_LIMIT.toString().length
+const validCheckMetricsSymbols = ['structuredTypeRelatedTo']
 
 void (async () => {
   console.time(':: Parse time')
@@ -76,6 +75,7 @@ void (async () => {
         .slice(0, FILE_TYPE_LIMIT)
       
       console.log('')
+
       for (const metric of typeMetrics)
         console.log(`  ${cli.metric(metric)}`)
 
@@ -86,9 +86,11 @@ void (async () => {
   console.groupEnd()
   console.timeEnd(':: Parse time')
   console.log(':: %o total traces, %o total types', trace.length, types.length)
-  console.log(':: %o total measured checks', checkMetrics.length)
-  console.log(`:: ${durationTotal.toFixed(0)} ms total measured check duration`, )
+  console.log(`:: Measured %o check metrics of kind: [${validCheckMetricsSymbols.map((s) => clc.cyan(s)).join(',')}]`, checkMetrics.length)
+  console.log(`:: ${durationTotal.toFixed(0)} ms total measured duration`, )
   console.log('')
+
+  // orderedMetrics.slice(0,3).map(([k, metrics]) => console.log(metrics[0]))
 })()
 
 
@@ -124,11 +126,10 @@ type MappedSymbolMetrics = ReturnType<typeof getSymbolCheckMetrics>
 
 function sumByMetricDuration (metrics: Metric[]) { return sumBy(metrics, 'check.dur') }
 
-function getSymbolCheckMetrics({ trace, types }: TraceAndTypes) {
-  const validSymbols = ['checkExpression', 'structuredTypeRelatedTo']
 
+function getSymbolCheckMetrics({ trace, types }: TraceAndTypes) {
   const checks: TraceJson.CheckStructuredType[] = trace.filter(
-    ({ cat, name }) => cat === 'check' && validSymbols.includes(name)
+    ({ cat, name }) => cat === 'check' && validCheckMetricsSymbols.includes(name)
   ) as any[]
 
   const metrics: Metric[] = []
@@ -138,13 +139,16 @@ function getSymbolCheckMetrics({ trace, types }: TraceAndTypes) {
     checks.map(({ args: { sourceId } }, index) => [sourceId, index] as const)
   )
 
+
   // For loop for perf
   for (const item of types) {
     if (!('symbolName' in item)) continue
 
     // Ignored
     // TODO: ?? utilize this for reference/alias listing??
-    if (!item.firstDeclaration) continue
+    if (!item.firstDeclaration) {
+      continue
+    }
 
     const symbol = item as Metric['symbol']
     const check = checks[sourceIdIndexMap.get(symbol.id)!]
@@ -158,7 +162,6 @@ function getSymbolCheckMetrics({ trace, types }: TraceAndTypes) {
     })
     
   }
-
   return metrics
 }
 
@@ -222,7 +225,7 @@ namespace TraceJson {
  * @example {"id":56,"symbolName":"IArguments","recursionId":1,"firstDeclaration":{"path":".../node_modules/typescript/lib/lib.es5.d.ts","start":{"line":386,"character":2},"end":{"line":392,"character":2}},"flags":["Object"]},
  * @example {"id":56,"symbolName":"IArguments","recursionId":1,"firstDeclaration":{"path":".../node_modules/typescript/lib/lib.es5.d.ts","start":{"line":386,"character":2},"end":{"line":392,"character":2}},"flags":["Object"]},
  * @example {"id":32225,"symbolName":"FaunaMusselsBiomassScalesTypeModelType","firstDeclaration":{"path":".../src/models/gql/FaunaMusselsBiomassScalesTypeModel.ts","start":{"line":2,"character":99},"end":{"line":5,"character":124}},"flags":["TypeParameter","IncludesStructuredOrInstantiable"]},
-
+ * @example {"id":3890,"symbolName":"props","recursionId":33,"firstDeclaration":{"path":"/node_modules/mobx-state-tree/dist/types/complex-types/model.d.ts","start":{"line":82,"character":73},"end":{"line":83,"character":163}},"flags":["524288"],"display":"<PROPS2 extends ModelPropertiesDeclaration>(props: PROPS2) => IModelType<PROPS & ModelPropertiesDeclarationToProperties<PROPS2>, OTHERS, ?, CustomS>"},
  */
 namespace TypesJson {
   interface CodePos {
@@ -239,8 +242,10 @@ namespace TypesJson {
     id: number
     symbolName: string
     recursionId?: number
+    instantiatedType?: number
     firstDeclaration?: { path: string; start: CodePos; end: CodePos }
     flags: string[]
+    display?: string
   }
   export type Item = Intrinsic | Symbol
   export type Json = Item[]

@@ -3,6 +3,7 @@
 A way to visualize which files & types are hurting your TypeScript project compilation time.
 
 + [Usage](#usage)
++ [How it works / Caveats](#how-it-works--caveats)
 
 ## Usage
 
@@ -71,3 +72,11 @@ Package json scripts:
   }
 }
 ```
+
+## How it works / Caveats
+
+Basically sums up durations based on the `sturcturedTypeRelatedTo` metrics - which is a significant but still only part of the story.
+
+This metric correlates to type compilation time but more importantly for this tool, it contains information on where the type comes from in an easy-to-parse way.
+
+Hopefully this trace info becomes easier to parse in future. Perhaps someone with more experience can contribute further detail.
