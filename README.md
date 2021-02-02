@@ -6,13 +6,15 @@ A way to visualize which files & types are hurting your TypeScript project compi
 
 ## Usage
 
-These 1-liners should work in most TypeScript projects:
+Should work on most TypeScript projects:
 
 ```bash
 npm run tsc --noEmit  --generateTrace .tsTrace && npx ts-rank
+```
 
-# Or for when using incremental builds:
+When using incremental builds, do this to ensure all files are traced:
 
+```bash
 npm run tsc --noEmit --generateTrace .tsTrace --incremental false --tsBuildInfoFile null && npx ts-rank
 ```
 
