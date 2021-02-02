@@ -1,140 +1,165 @@
 #!/usr/bin/env node
 
 import { readFile } from 'fs'
-import { orderBy } from 'lodash'
-import { relative, resolve } from 'path'
+import { groupBy, orderBy, sortBy, sumBy } from 'lodash'
+import { dirname, relative, resolve, sep } from 'path'
 import Yargs from 'yargs'
 import * as MicroMatch from 'micromatch'
+import * as clc from "cli-color";
 
-const c = console
 const cwd = process.cwd()
-const typeChars = 30 // TODO: automate
-const durChars = 7 // TODO: automate
+const TYPE_CHARS_LEN = 30 // TODO: automate
 
-let { logCount, traceFile, typesFile, pattern = '**/*' } = Yargs(process.argv.slice(2))
+let { FILE_LIMIT, FILE_TYPE_LIMIT, TRACE_FILE, TYPES_FILE, PATTERN = '**/*' } = Yargs(process.argv.slice(2))
   .usage('ts-rank')
   .options({
-    logCount: { type: 'number', default: 10 },
-    traceFile: { type: 'string', default: './.tsTrace/trace.json' },
-    typesFile: { type: 'string', default: './.tsTrace/types.json' },
-    pattern: { type: 'string', desc: 'Ruduce the ranking to files that match this glob' },
+    FILE_LIMIT: { type: 'number', default: 50, alias: 'f' },
+    FILE_TYPE_LIMIT: { type: 'number', default: 10, alias: 't' },
+    TRACE_FILE: { type: 'string', default: './.tsTrace/trace.json' },
+    TYPES_FILE: { type: 'string', default: './.tsTrace/types.json' },
+    PATTERN: { type: 'string', desc: 'Ruduce the ranking to files that match this glob', alias: 'p' },
   }).argv
 
-traceFile = resolve(cwd, traceFile)
-typesFile = resolve(cwd, typesFile)
+TRACE_FILE = resolve(cwd, TRACE_FILE)
+TYPES_FILE = resolve(cwd, TYPES_FILE)
+
+const FILE_LIMIT_CHARS = FILE_LIMIT.toString().length
+const FILE_TYPE_LIMIT_CHARS = FILE_TYPE_LIMIT.toString().length
 
 void (async () => {
-  c.time(':: T')
-  c.log(``)
-  c.group(`ts-rank\n\nRanking output from %o`, `tsconfig.compilerOptions.generateTrace`)
-  c.dir({ logCount, traceFile, typesFile, pattern, cwd })
-  c.log(``)
+  console.time(':: T')
+  console.log(``)
+  console.group(`ts-rank\n\nRanking output from %o`, `tsconfig.compilerOptions.generateTrace`)
+  console.dir({ FILE_LIMIT, FILE_TYPE_LIMIT, TRACE_FILE, TYPES_FILE, PATTERN, cwd })
+  console.log(``)
 
-  c.time(':: Reading files')
+  console.time(':: Reading files')
 
   const [trace = [], types = []] = await Promise.all([
-    readJsonFile<TraceJson.Json>(traceFile),
-    readJsonFile<TypesJson.Json>(typesFile),
+    readJsonFile<TraceJson.Json>(TRACE_FILE),
+    readJsonFile<TypesJson.Json>(TYPES_FILE),
   ])
 
-  c.timeEnd(':: Reading files')
+  console.timeEnd(':: Reading files')
 
-  c.log(':: %o traces, %o types', trace.length, types.length)
+  console.log(':: %o traces, %o types', trace.length, types.length)
 
-  const strucTypeMetrics = mapStructuredTypes({ trace, types }).filter(FilterByGlob(pattern))
-  const moduleMetrics = rankMetricsByDur(
-    strucTypeMetrics.filter(({ isNodeModule }) => isNodeModule)
+  const checkMetrics = getSymbolCheckMetrics({ trace, types }).filter(FilterByGlob(PATTERN))
+
+  const metricsMapByPath = Object.entries(groupBy(checkMetrics, 'symbol.firstDeclaration.path'))
+
+  const sumByMetricDuration = (metrics: Metric[]) => sumBy(metrics, 'check.dur')
+  const orderedMetrics = sortBy(metricsMapByPath, ([path, metrics], compare) =>
+    sumByMetricDuration(metrics)
   )
-  const nonModuleMetrics = rankMetricsByDur(
-    strucTypeMetrics.filter(({ isNodeModule }) => !isNodeModule)
-  )
+    .reverse()
+  
+  console.group(`Files ranked by Duration (Wall)`)
 
-  c.group('\n%o source:', 'StructuredTypeCheck')
-  logMetricGroup(nonModuleMetrics)
-  c.groupEnd()
+  let fileCount = FILE_LIMIT+1
 
-  c.group('\n%o node_modules:', 'StructuredTypeCheck')
-  logMetricGroup(moduleMetrics)
-  c.groupEnd()
+  orderedMetrics
+    .slice(0, FILE_LIMIT)
+    .reverse()
+    .forEach(([_, metrics]) => {
+      const totalTime = parseFloat(
+        (sumByMetricDuration(metrics) / 1000).toFixed(2)
+      )
 
-  c.timeEnd(':: T')
-  c.groupEnd()
-  c.log('')
+      --fileCount
+      
+      console.group(clc.blackBright(`  ${`# ${clc.bold.cyan(fileCount)}`.padEnd(29)} ${clc.bold.red(totalTime)} ms (Total time)`))
+
+      const typeMetrics = orderBy(metrics, ['check.dur'], 'desc')
+        .slice(0, FILE_TYPE_LIMIT)
+      
+      console.log('')
+      for (const metric of typeMetrics)
+        console.log(`  ${cli.metric(metric)}`)
+
+  console.log('')
+      console.groupEnd()
+    })
+
+  console.timeEnd(':: T')
+  console.groupEnd()
+  console.log('')
 })()
 
-function logMetricGroup(metrics: Metric[]) {
-  let count = 0
 
-  for (const metric of metrics)
-    c.log(`${++count}. `.padStart(logCount.toString().length + 2), metricLogMsg(metric))
-
-  c.log('')
-}
-
-function metricLogMsg({
-  symbol: {
-    firstDeclaration: { end, path, start },
-    symbolName,
+const cli = {
+  count: (v: number, n = 2) => `${clc.bold(v)}`.padEnd(n.toString().length+1),
+  time: (v: number) =>
+    clc.bold(v.toFixed(0)),
+  
+  symbolName: (v: string) =>
+    clc.bold.blueBright(v.slice(0, TYPE_CHARS_LEN).padEnd(TYPE_CHARS_LEN)),
+  
+  filePath: (path: string, pos?: { line: number, character: number }) => {
+    const dir = dirname(path)
+    const pathTxt = `${dir + sep}${clc.underline.bold(relative(dir, path))}`
+    return !pos ? pathTxt : pathTxt + clc.blackBright(`:${pos.line}:${pos.character}`);
   },
-  check,
-}: Metric) {
-  const relPath = relative(cwd, path)
-  const dur = check!.dur / 1000 // Get ms
+  
+  metric({
+    symbol: {
+      firstDeclaration: { end, path, start },
+      symbolName,
+    },
+    check,
+  }: Metric) {
+    const relPath = relative(cwd, path)
+    const dur = check!.dur / 1000 // Get ms
 
-  return `${dur.toFixed(0).padStart(durChars)} ms < ${symbolName
-    .slice(0, typeChars)
-    .padEnd(typeChars)} > ${relPath}:${start.line}:${start.character}`
+    return `${(clc.bold.yellow(dur.toFixed(0)) + ' ms').padEnd(27)} ${cli.symbolName(symbolName)} ${cli.filePath(relPath, start)}`
+  }
 }
 
-type MappedSymbolMetrics = ReturnType<typeof mapStructuredTypes>
+type MappedSymbolMetrics = ReturnType<typeof getSymbolCheckMetrics>
 
-function mapStructuredTypes({ trace, types }: TraceAndTypes) {
-  const structuredTypeChecks: TraceJson.CheckStructuredType[] = trace.filter(
-    ({ cat, name }) => cat === 'check' && name === 'structuredTypeRelatedTo'
+
+function getSymbolCheckMetrics({ trace, types }: TraceAndTypes) {
+  const validSymbols = ['checkExpression', 'structuredTypeRelatedTo']
+
+  const checks: TraceJson.CheckStructuredType[] = trace.filter(
+    ({ cat, name }) => cat === 'check' && validSymbols.includes(name)
   ) as any[]
 
-  const structuredTypeMetrics: Metric[] = []
+  const metrics: Metric[] = []
 
   /** Important for performance */
   const sourceIdIndexMap = new Map(
-    structuredTypeChecks.map(({ args: { sourceId } }, index) => [sourceId, index] as const)
+    checks.map(({ args: { sourceId } }, index) => [sourceId, index] as const)
   )
 
   // For loop for perf
   for (const item of types) {
-    if ('symbolName' in item) {
-      // Ignored
-      // TODO: ?? utilize this for reference/alias listing??
-      if (!item.firstDeclaration) continue
+    if (!('symbolName' in item)) continue
 
-      const symbol = item as Metric['symbol']
-      const check = structuredTypeChecks[sourceIdIndexMap.get(symbol.id)!]
+    // Ignored
+    // TODO: ?? utilize this for reference/alias listing??
+    if (!item.firstDeclaration) continue
 
-      if (!check) continue
+    const symbol = item as Metric['symbol']
+    const check = checks[sourceIdIndexMap.get(symbol.id)!]
 
-      structuredTypeMetrics.push({
-        symbol,
-        check,
-        isNodeModule: symbol.firstDeclaration.path.includes('/node_modules'),
-      })
-    }
+    if (!check) continue
+
+    metrics.push({
+      symbol,
+      check,
+      isNodeModule: symbol.firstDeclaration.path.includes('/node_modules'),
+    })
+    
   }
 
-  return structuredTypeMetrics
+  return metrics
 }
 
 function FilterByGlob(glob: string) {
   return (metric: Metric) => MicroMatch.isMatch(metric.symbol.firstDeclaration.path, glob)
 }
 
-function rankMetricsByDur(metrics: MappedSymbolMetrics) {
-  return orderBy(metrics, ['check.dur'], 'desc')
-    .slice(0, logCount)
-    .map((item) => ({
-      ...item,
-      isNodeModule: item.symbol.firstDeclaration.path.includes('/node_modules'),
-    }))
-}
 
 function readFileAsync(pth: string) {
   return new Promise<string>((resolve) => readFile(pth, 'utf8', (_, f) => resolve(f)))
