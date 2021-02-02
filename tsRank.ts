@@ -27,7 +27,7 @@ const FILE_LIMIT_CHARS = FILE_LIMIT.toString().length
 const FILE_TYPE_LIMIT_CHARS = FILE_TYPE_LIMIT.toString().length
 
 void (async () => {
-  console.time(':: T')
+  console.time(':: Parse time')
   console.log(``)
   console.group(`ts-rank\n\nRanking output from %o`, `tsconfig.compilerOptions.generateTrace`)
   console.dir({ FILE_LIMIT, FILE_TYPE_LIMIT, TRACE_FILE, TYPES_FILE, PATTERN, cwd })
@@ -41,20 +41,20 @@ void (async () => {
   ])
 
   console.timeEnd(':: Reading files')
+  console.log('')
 
-  console.log(':: %o traces, %o types', trace.length, types.length)
 
-  const checkMetrics = getSymbolCheckMetrics({ trace, types }).filter(FilterByGlob(PATTERN))
-
-  const metricsMapByPath = Object.entries(groupBy(checkMetrics, 'symbol.firstDeclaration.path'))
-
-  const sumByMetricDuration = (metrics: Metric[]) => sumBy(metrics, 'check.dur')
-  const orderedMetrics = sortBy(metricsMapByPath, ([path, metrics], compare) =>
+  const checkMetrics = getSymbolCheckMetrics({ trace, types })
+  const filteredCheckMetrics = checkMetrics.filter(FilterByGlob(PATTERN))
+  const durationTotal = sumByMetricDuration(filteredCheckMetrics) / 1000
+  const metricsByPath = Object.entries(groupBy(filteredCheckMetrics, 'symbol.firstDeclaration.path'))
+  const orderedMetrics = sortBy(metricsByPath, ([path, metrics]) =>
     sumByMetricDuration(metrics)
   )
     .reverse()
   
-  console.group(`Files ranked by Duration (Wall)`)
+  console.group(`:: Files ranked by type check duration:`)
+  console.log('')
 
   let fileCount = FILE_LIMIT+1
 
@@ -66,9 +66,11 @@ void (async () => {
         (sumByMetricDuration(metrics) / 1000).toFixed(2)
       )
 
+      const percentage = ((totalTime / durationTotal) * 100).toFixed(0)
+
       --fileCount
       
-      console.group(clc.blackBright(`  ${`# ${clc.bold.cyan(fileCount)}`.padEnd(29)} ${clc.bold.red(totalTime)} ms (Total time)`))
+      console.group(clc.blackBright(`  ${`# ${clc.bold.cyan(fileCount)}`.padEnd(29)} ${clc.bold.red(totalTime)} ms ${`(${clc.bold.green(percentage + ' %')} of total metrics)`} ${`(${clc.greenBright(metrics.length)} metrics)`}`))
 
       const typeMetrics = orderBy(metrics, ['check.dur'], 'desc')
         .slice(0, FILE_TYPE_LIMIT)
@@ -77,12 +79,15 @@ void (async () => {
       for (const metric of typeMetrics)
         console.log(`  ${cli.metric(metric)}`)
 
-  console.log('')
+      console.log('')
       console.groupEnd()
     })
 
-  console.timeEnd(':: T')
   console.groupEnd()
+  console.timeEnd(':: Parse time')
+  console.log(':: %o total traces, %o total types', trace.length, types.length)
+  console.log(':: %o total measured checks', checkMetrics.length)
+  console.log(`:: ${durationTotal.toFixed(0)} ms total measured check duration`, )
   console.log('')
 })()
 
@@ -117,6 +122,7 @@ const cli = {
 
 type MappedSymbolMetrics = ReturnType<typeof getSymbolCheckMetrics>
 
+function sumByMetricDuration (metrics: Metric[]) { return sumBy(metrics, 'check.dur') }
 
 function getSymbolCheckMetrics({ trace, types }: TraceAndTypes) {
   const validSymbols = ['checkExpression', 'structuredTypeRelatedTo']
