@@ -16,6 +16,36 @@ npm run tsc --noEmit  --generateTrace .tsTrace && npx ts-rank
 npm run tsc --noEmit --generateTrace .tsTrace --incremental false --tsBuildInfoFile null && npx ts-rank
 ```
 
+Will output something like this:
+
+```
+# 2        705.05 ms (Total time)
+
+  201 ms   StyledComponentBase            ./node_modules/@types/styled-components/index.d.ts:167:133
+  138 ms   StyledComponentProps           ./node_modules/@types/styled-components/index.d.ts:59:9
+  115 ms   StyledComponentProps           ./node_modules/@types/styled-components/index.d.ts:59:9
+  26 ms    StyledComponentBase            ./node_modules/@types/styled-components/index.d.ts:167:133
+  8 ms     StyledComponent                ./node_modules/@types/styled-components/index.d.ts:158:38
+  8 ms     StyledComponentBase            ./node_modules/@types/styled-components/index.d.ts:167:133
+  8 ms     StyledComponentProps           ./node_modules/@types/styled-components/index.d.ts:59:9
+  7 ms     ReactDefaultizedProps          ./node_modules/@types/styled-components/index.d.ts:55:13
+  7 ms     Defaultize                     ./node_modules/@types/styled-components/index.d.ts:44:65
+  7 ms     StyledComponentBase            ./node_modules/@types/styled-components/index.d.ts:167:133
+
+# 1        757.79 ms (Total time)
+
+  22 ms    IModelType                     ./node_modules/mobx-state-tree/dist/types/complex-types/model.d.ts:79:2
+  21 ms    named                          ./node_modules/mobx-state-tree/dist/types/complex-types/model.d.ts:81:32
+  20 ms    named                          ./node_modules/mobx-state-tree/dist/types/complex-types/model.d.ts:81:32
+  14 ms    IModelType                     ./node_modules/mobx-state-tree/dist/types/complex-types/model.d.ts:79:2
+  13 ms    named                          ./node_modules/mobx-state-tree/dist/types/complex-types/model.d.ts:81:32
+  13 ms    IModelType                     ./node_modules/mobx-state-tree/dist/types/complex-types/model.d.ts:79:2
+  12 ms    named                          ./node_modules/mobx-state-tree/dist/types/complex-types/model.d.ts:81:32
+  11 ms    IModelType                     ./node_modules/mobx-state-tree/dist/types/complex-types/model.d.ts:79:2
+  10 ms    ModelInstanceType              ./node_modules/mobx-state-tree/dist/types/complex-types/model.d.ts:70:20
+  9 ms     IModelType                     ./node_modules/mobx-state-tree/dist/types/complex-types/model.d.ts:79:2
+```
+
 Further usage:
 
 ```bash
