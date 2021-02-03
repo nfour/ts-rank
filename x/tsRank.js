@@ -20,10 +20,9 @@ let { FILE_LIMIT, FILE_TYPE_LIMIT, TRACE_FILE, TYPES_FILE, PATTERN = '**/*' } = 
 }).argv;
 TRACE_FILE = path_1.resolve(cwd, TRACE_FILE);
 TYPES_FILE = path_1.resolve(cwd, TYPES_FILE);
-const FILE_LIMIT_CHARS = FILE_LIMIT.toString().length;
-const FILE_TYPE_LIMIT_CHARS = FILE_TYPE_LIMIT.toString().length;
+const validCheckMetricsSymbols = ['structuredTypeRelatedTo'];
 void (async () => {
-    console.time(':: T');
+    console.time(':: Parse time');
     console.log(``);
     console.group(`ts-rank\n\nRanking output from %o`, `tsconfig.compilerOptions.generateTrace`);
     console.dir({ FILE_LIMIT, FILE_TYPE_LIMIT, TRACE_FILE, TYPES_FILE, PATTERN, cwd });
@@ -34,21 +33,24 @@ void (async () => {
         readJsonFile(TYPES_FILE),
     ]);
     console.timeEnd(':: Reading files');
-    console.log(':: %o traces, %o types', trace.length, types.length);
-    const checkMetrics = getSymbolCheckMetrics({ trace, types }).filter(FilterByGlob(PATTERN));
-    const metricsMapByPath = Object.entries(lodash_1.groupBy(checkMetrics, 'symbol.firstDeclaration.path'));
-    const sumByMetricDuration = (metrics) => lodash_1.sumBy(metrics, 'check.dur');
-    const orderedMetrics = lodash_1.sortBy(metricsMapByPath, ([path, metrics], compare) => sumByMetricDuration(metrics))
+    console.log('');
+    const checkMetrics = getSymbolCheckMetrics({ trace, types });
+    const filteredCheckMetrics = checkMetrics.filter(FilterByGlob(PATTERN));
+    const durationTotal = sumByMetricDuration(filteredCheckMetrics) / 1000;
+    const metricsByPath = Object.entries(lodash_1.groupBy(filteredCheckMetrics, 'symbol.firstDeclaration.path'));
+    const orderedMetrics = lodash_1.sortBy(metricsByPath, ([path, metrics]) => sumByMetricDuration(metrics))
         .reverse();
-    console.group(`Files ranked by Duration (Wall)`);
+    console.group(`:: Files ranked by type check duration:`);
+    console.log('');
     let fileCount = FILE_LIMIT + 1;
     orderedMetrics
         .slice(0, FILE_LIMIT)
         .reverse()
         .forEach(([_, metrics]) => {
         const totalTime = parseFloat((sumByMetricDuration(metrics) / 1000).toFixed(2));
+        const percentage = ((totalTime / durationTotal) * 100).toFixed(0);
         --fileCount;
-        console.group(clc.blackBright(`  ${`# ${clc.bold.cyan(fileCount)}`.padEnd(29)} ${clc.bold.red(totalTime)} ms (Total time)`));
+        console.group(clc.blackBright(`  ${`# ${clc.bold.cyan(fileCount)}`.padEnd(29)} ${clc.bold.red(totalTime)} ms ${`(${clc.bold.green(percentage + ' %')} of total metrics)`} ${`(${clc.greenBright(metrics.length)} metrics)`}`));
         const typeMetrics = lodash_1.orderBy(metrics, ['check.dur'], 'desc')
             .slice(0, FILE_TYPE_LIMIT);
         console.log('');
@@ -57,9 +59,13 @@ void (async () => {
         console.log('');
         console.groupEnd();
     });
-    console.timeEnd(':: T');
     console.groupEnd();
+    console.timeEnd(':: Parse time');
+    console.log(':: %o total traces, %o total types', trace.length, types.length);
+    console.log(`:: Measured %o check metrics of kind: [${validCheckMetricsSymbols.map((s) => clc.cyan(s)).join(',')}]`, checkMetrics.length);
+    console.log(`:: ${durationTotal.toFixed(0)} ms total measured duration`);
     console.log('');
+    // orderedMetrics.slice(0,3).map(([k, metrics]) => console.log(metrics[0]))
 })();
 const cli = {
     count: (v, n = 2) => `${clc.bold(v)}`.padEnd(n.toString().length + 1),
@@ -76,9 +82,10 @@ const cli = {
         return `${(clc.bold.yellow(dur.toFixed(0)) + ' ms').padEnd(27)} ${cli.symbolName(symbolName)} ${cli.filePath(relPath, start)}`;
     }
 };
+function sumByMetricDuration(metrics) { return lodash_1.sumBy(metrics, 'check.dur'); }
 function getSymbolCheckMetrics({ trace, types }) {
-    const validSymbols = ['checkExpression', 'structuredTypeRelatedTo'];
-    const checks = trace.filter(({ cat, name }) => cat === 'check' && validSymbols.includes(name));
+    // TODO: can we log the position of checkSourceFile and mark subsequent checks with it?
+    const checks = trace.filter(({ cat, name }) => cat === 'check' && validCheckMetricsSymbols.includes(name));
     const metrics = [];
     /** Important for performance */
     const sourceIdIndexMap = new Map(checks.map(({ args: { sourceId } }, index) => [sourceId, index]));
@@ -88,8 +95,9 @@ function getSymbolCheckMetrics({ trace, types }) {
             continue;
         // Ignored
         // TODO: ?? utilize this for reference/alias listing??
-        if (!item.firstDeclaration)
+        if (!item.firstDeclaration) {
             continue;
+        }
         const symbol = item;
         const check = checks[sourceIdIndexMap.get(symbol.id)];
         if (!check)

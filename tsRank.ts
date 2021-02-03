@@ -128,6 +128,9 @@ function sumByMetricDuration (metrics: Metric[]) { return sumBy(metrics, 'check.
 
 
 function getSymbolCheckMetrics({ trace, types }: TraceAndTypes) {
+
+  // TODO: can we log the position of checkSourceFile and mark subsequent checks with it?
+
   const checks: TraceJson.CheckStructuredType[] = trace.filter(
     ({ cat, name }) => cat === 'check' && validCheckMetricsSymbols.includes(name)
   ) as any[]
