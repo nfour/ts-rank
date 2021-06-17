@@ -132,7 +132,7 @@ function getSymbolCheckMetrics({ trace, types }: TraceAndTypes) {
   // TODO: can we log the position of checkSourceFile and mark subsequent checks with it?
 
   const checks: TraceJson.CheckStructuredType[] = trace.filter(
-    ({ cat, name }) => cat === 'check' && validCheckMetricsSymbols.includes(name)
+    ({ cat, name }) => (cat === 'checkTypes' || cat === 'check') && validCheckMetricsSymbols.includes(name)
   ) as any[]
 
   const metrics: Metric[] = []
@@ -212,7 +212,7 @@ namespace TraceJson {
   }
 
   export interface CheckStructuredType {
-    cat: 'check'
+    cat: 'check'|'checkTypes'
     ts: number
     name: 'structuredTypeRelatedTo'
     dur: number

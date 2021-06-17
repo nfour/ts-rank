@@ -85,7 +85,7 @@ const cli = {
 function sumByMetricDuration(metrics) { return lodash_1.sumBy(metrics, 'check.dur'); }
 function getSymbolCheckMetrics({ trace, types }) {
     // TODO: can we log the position of checkSourceFile and mark subsequent checks with it?
-    const checks = trace.filter(({ cat, name }) => cat === 'check' && validCheckMetricsSymbols.includes(name));
+    const checks = trace.filter(({ cat, name }) => (cat === 'checkTypes' || cat === 'check') && validCheckMetricsSymbols.includes(name));
     const metrics = [];
     /** Important for performance */
     const sourceIdIndexMap = new Map(checks.map(({ args: { sourceId } }, index) => [sourceId, index]));
