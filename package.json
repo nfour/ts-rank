@@ -1,6 +1,6 @@
 {
   "name": "ts-rank",
-  "version": "2.1.2",
+  "version": "2.2.0",
   "main": "./x/tsRank.js",
   "bin": "./x/tsRank.js",
   "scripts": {
